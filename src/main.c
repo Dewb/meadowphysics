@@ -520,7 +520,15 @@ static void handler_ClockExt(s32 data) {
 		}
 	}
 	else if(data) {
+#ifdef TARGET
 		clockdivtime = (clockdivtime / divtime);
+#else
+		// detect divide by zero for x86
+		if (divtime != 0) 
+		{
+			clockdivtime = (clockdivtime / divtime);
+		}
+#endif
 		timer_reset_set(&clockTimer, clockdivtime);
 	}
 }
