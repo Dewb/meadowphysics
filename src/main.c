@@ -102,8 +102,12 @@ re_t re;
 
 
 // NVRAM data structure located in the flash array.
+#ifdef TARGET
 __attribute__((__section__(".flash_nvram")))
 static nvram_data_t flashy;
+#else
+nvram_data_t flashy;
+#endif
 
 
 
@@ -121,7 +125,7 @@ extern void timers_set_monome(void);
 extern void timers_unset_monome(void);
 
 // check the event queue
-static void check_events(void);
+void check_events(void);
 
 // handler protos
 static void handler_None(s32 data) { ;; }
@@ -983,10 +987,10 @@ void flash_read(void) {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-// main
+// initialize + main
 
 
-int main(void) {
+void initialize_module(void) {
 	u8 i1;
 
 	sysclk_init();
@@ -1069,6 +1073,11 @@ int main(void) {
 	timer_add(&keyTimer,50,&keyTimer_callback, NULL);
 	timer_add(&adcTimer,100,&adcTimer_callback, NULL);
 	clock_temp = 10000; // out of ADC range to force tempo
+}
+
+int main(void)
+{
+	initialize_module();
 
 	while (true) {
 		check_events();
