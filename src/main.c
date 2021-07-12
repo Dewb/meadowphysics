@@ -21,6 +21,10 @@
 #include "init_trilogy.h"
 #include "monome.h"
 #include "timers.h"
+#include "adc.h"
+#include "util.h"
+#include "cdc.h"
+#include "ftdi.h"
 #include "twi.h"
 #include "types.h"
 #include "util.h"
@@ -376,11 +380,10 @@ static void adcTimer_callback(void* o)
 }
 
 // monome polling callback
-static void monome_poll_timer_callback(void* obj)
-{
-    // asynchronous, non-blocking read
-    // UHC callback spawns appropriate events
-    ftdi_read();
+static void monome_poll_timer_callback(void* obj) {
+  // asynchronous, non-blocking read
+  // UHC callback spawns appropriate events
+	serial_read();
 }
 
 // monome refresh callback
@@ -421,26 +424,28 @@ static void handler_FtdiDisconnect(s32 data)
     // event_post(&e);
 }
 
-static void handler_MonomeConnect(s32 data)
-{
-    // print_dbg("\r\n// monome connect /////////////////");
-    key_count = 0;
-    SIZE = monome_size_x();
-    LENGTH = SIZE - 1;
-    // print_dbg("\r monome size: ");
-    // print_dbg_ulong(SIZE);
-    VARI = monome_is_vari();
-    // print_dbg("\r monome vari: ");
-    // print_dbg_ulong(VARI);
+static void handler_SerialConnect(s32 data) {
+  monome_setup_mext();
+}
 
-    if (VARI)
-        re = &refresh;
-    else
-        re = &refresh_mono;
+static void handler_MonomeConnect(s32 data) {
+	// print_dbg("\r\n// monome connect /////////////////"); 
+	key_count = 0;
+	SIZE = monome_size_x();
+	LENGTH = SIZE - 1;
+	// print_dbg("\r monome size: ");
+	// print_dbg_ulong(SIZE);
+	VARI = monome_is_vari();
+	// print_dbg("\r monome vari: ");
+	// print_dbg_ulong(VARI);
 
-    // monome_set_quadrant_flag(0);
-    // monome_set_quadrant_flag(1);
-    timers_set_monome();
+	if(VARI) re = &refresh;
+	else re = &refresh_mono;
+
+
+	// monome_set_quadrant_flag(0);
+	// monome_set_quadrant_flag(1);
+	timers_set_monome();
 }
 
 static void handler_MonomePoll(s32 data) { monome_read_serial(); }
@@ -1023,21 +1028,22 @@ static void mp_process_ii(uint8_t* data, uint8_t l)
 }
 
 // assign event handlers
-static inline void assign_main_event_handlers(void)
-{
-    app_event_handlers[kEventFront] = &handler_Front;
-    app_event_handlers[kEventKeyTimer] = &handler_KeyTimer;
-    app_event_handlers[kEventSaveFlash] = &handler_SaveFlash;
-    app_event_handlers[kEventPollADC] = &handler_PollADC;
-    app_event_handlers[kEventClockNormal] = &handler_ClockNormal;
-    app_event_handlers[kEventClockExt] = &handler_ClockExt;
-    app_event_handlers[kEventFtdiConnect] = &handler_FtdiConnect;
-    app_event_handlers[kEventFtdiDisconnect] = &handler_FtdiDisconnect;
-    app_event_handlers[kEventMonomeConnect] = &handler_MonomeConnect;
-    app_event_handlers[kEventMonomeDisconnect] = &handler_None;
-    app_event_handlers[kEventMonomePoll] = &handler_MonomePoll;
-    app_event_handlers[kEventMonomeRefresh] = &handler_MonomeRefresh;
-    app_event_handlers[kEventMonomeGridKey] = &handler_MonomeGridKey;
+static inline void assign_main_event_handlers(void) {
+	app_event_handlers[ kEventFront ]	= &handler_Front;
+	app_event_handlers[ kEventKeyTimer ] = &handler_KeyTimer;
+	app_event_handlers[ kEventSaveFlash ] = &handler_SaveFlash;
+	app_event_handlers[ kEventPollADC ]	= &handler_PollADC;
+	app_event_handlers[ kEventClockNormal ] = &handler_ClockNormal;
+	app_event_handlers[ kEventClockExt ] = &handler_ClockExt;
+	app_event_handlers[ kEventFtdiConnect ]	= &handler_FtdiConnect ;
+	app_event_handlers[ kEventFtdiDisconnect ]	= &handler_FtdiDisconnect ;
+	app_event_handlers[ kEventMonomeConnect ]	= &handler_MonomeConnect ;
+	app_event_handlers[ kEventMonomeDisconnect ]	= &handler_None ;
+	app_event_handlers[ kEventMonomePoll ]	= &handler_MonomePoll ;
+	app_event_handlers[ kEventMonomeRefresh ]	= &handler_MonomeRefresh ;
+	app_event_handlers[ kEventMonomeGridKey ]	= &handler_MonomeGridKey ;
+	app_event_handlers[ kEventSerialConnect ]	= &handler_SerialConnect ;
+	app_event_handlers[ kEventSerialDisconnect ]	= &handler_FtdiDisconnect ;
 }
 
 // app event loop
@@ -1128,7 +1134,7 @@ void flash_read(void)
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-// initialize + main
+// main
 
 void initialize_module(void)
 {
@@ -1152,7 +1158,7 @@ void initialize_module(void)
     init_usb_host();
     init_monome();
 
-    init_i2c_slave(0x30);
+    init_i2c_follower(0x30);
 
     print_dbg("\r\n\n// meadowphysics //////////////////////////////// ");
     print_dbg_ulong(sizeof(flashy));
@@ -1221,7 +1227,7 @@ void initialize_module(void)
 int main(void)
 {
     initialize_module();
-
+    
     while (true)
     {
         check_events();
