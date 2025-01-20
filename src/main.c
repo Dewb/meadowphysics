@@ -1010,9 +1010,6 @@ static void refresh()
         // SHOW SPEED
         if(mode_256 == 1) {
             for(i1=0;i1<8;i1++) {
-                if(m.position[i1] >= 0)
-                    monomeLedBuffer[128 + i1*16 + m.position[i1]] = L0;
-
                 if(m.position[i1] != -1)
                     monomeLedBuffer[128 + i1*16 + 2] = 2;
 
@@ -1044,9 +1041,6 @@ static void refresh()
         }
         // SHOW RULES
         else if(mode_256 == 2) {
-            for(i1=0;i1<8;i1++) 
-                if(m.position[i1] >= 0)
-                    monomeLedBuffer[128 + i1*16 + m.position[i1]] = L0;
 
             monomeLedBuffer[128 + edit_row_256 * 16] = L1;
             monomeLedBuffer[128 + edit_row_256 * 16 + 1] = L1;
